@@ -37,7 +37,7 @@ def gen_sequences(num_sequences, max_bits=50):
     labels = []
     for i in range(num_sequences):
         inp = get_input(max_bits)
-        parity = np.sum(inp) % 2 != 0
+        parity = 1 if np.sum(inp) % 2 != 0 else 0
         inputs.append(inp)
         labels.append(parity)
     return inputs, labels
@@ -50,14 +50,17 @@ optimizer = torch.optim.SGD(model.parameters(), lr=1, momentum=0)
 loss_function = torch.nn.NLLLoss()
 
 inputs, labels = gen_sequences(100)
-
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 for inx, elt in enumerate(zip(inputs, labels)):
-    inputs, label = torch.tensor(elt[0]).view(1, 1, -1), torch.tensor(elt[1]).view(-1, 1, 1)
-    print(inputs.size(), label.size())
+    inps, lbls = torch.tensor(elt[0]).view(1, 1, -1), torch.tensor(elt[1]).view(-1, 1, 1)
+    print(lbls, lbls.squeeze(1))
+    lbls = lbls.to(device=device, dtype=torch.int64)
+
+    print(inps.size(), lbls.size())
     optimizer.zero_grad()
 
-    out = model(inputs)
-    loss = loss_function(out, label)
+    out = model(inps)
+    loss = loss_function(out, lbls)
     loss.backward()
     optimizer.step()
     step += 1
