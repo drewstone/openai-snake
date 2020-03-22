@@ -3,26 +3,46 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset
 
 torch.manual_seed(1)
 
+class XORDataset(Dataset):
+    def __init__(self, num_sequences, seq_len):
+        self.datas, self.labels = gen_sequences(num_sequences, seq_len)
+
+    def __getitem__(self, index):
+        data, target = self.datas[index], self.labels[index]
+        return torch.tensor(data).float(), torch.tensor(target).float()
+
+    def __len__(self):
+        return len(self.datas)
+
 class XORModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim=1, hidden_dim=2, output_dim=1):
         super(XORModel, self).__init__()
+        print('New LSTM: (input: {}, hidden: {}, output: {}\n'
+            .format(input_dim, output_dim, hidden_dim))
         self.lstm = nn.LSTM(input_dim, hidden_dim)
         self.linear_out = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
         lstm_out    = self.run_through_lstm(x)
+        # print('LSTM layer output size: {}'.format(lstm_out.size()))
         out         = self.linear_out(lstm_out)
-        out         = F.log_softmax(out, dim=0)
+        # print('Linear label output size: {}'.format(out.size()))
+        out         = F.log_softmax(out.view(-1, 1), dim=1)
+        # print(out)
         return out
 
     def run_through_lstm(self, x):
+        x = x.float()
         # hidden = (torch.randn(1, 1, 2), torch.randn(1, 1, 2))
-        # for i in x:
+        # for i in x.view(-1, 1, 1):
+        #     i = i.long()
         #     out, hidden = self.lstm(i.view(-1, 1, 1).long(), hidden)
-        out = self.lstm(x.view(-1, 1, 1))
+        # print(x.view(-1, 1, 1))
+        out, h = self.lstm(x.view(1, 1, -1))
         return out
 
 
@@ -42,29 +62,33 @@ def gen_sequences(num_sequences, max_bits=50):
         labels.append(parity)
     return inputs, labels
 
-model = XORModel(input_dim=1, hidden_dim=2, output_dim=1)
+model = XORModel(input_dim=50, hidden_dim=2, output_dim=1)
 
-optimizer = torch.optim.SGD(model.parameters(), lr=1, momentum=0)
+batch_size = 1
+num_sequences = 10000
+seq_len = 50
+train_dataloader = DataLoader(XORDataset(num_sequences, seq_len), batch_size)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0)
 # loss_function = torch.nn.MSELoss()
-# loss_function = torch.nn.BCELoss()
-loss_function = torch.nn.NLLLoss()
-
-inputs, labels = gen_sequences(100)
+loss_function = torch.nn.BCELoss()
+# loss_function = torch.nn.NLLLoss()
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-for inx, elt in enumerate(zip(inputs, labels)):
-    inps, lbls = torch.tensor(elt[0]).view(1, 1, -1), torch.tensor(elt[1]).view(-1, 1, 1)
-    print(lbls, lbls.squeeze(1))
-    lbls = lbls.to(device=device, dtype=torch.int64)
 
-    print(inps.size(), lbls.size())
+running_loss = 0.0
+for inx, data in enumerate(train_dataloader):
+    inputs, labels = data
+    labels = labels.float().to(device=device)
+
     optimizer.zero_grad()
 
-    out = model(inps)
-    loss = loss_function(out, lbls)
+    out = model(inputs)
+    loss = loss_function(out, labels.float())
     loss.backward()
     optimizer.step()
-    step += 1
 
-    if (step > 100):
-        break;
+    running_loss += loss.item()
+    if inx % 1000 == 999:    # every 1000 mini-batches...
+        # ...log the running loss
+        print('training loss', running_loss / 1000)
+        running_loss = 0.0
     
