@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from parity_dataset import get_random_bits_parity
+
 torch.manual_seed(1)
 
 class XORModel(nn.Module):
@@ -55,11 +55,11 @@ inputs, labels = gen_sequences(100)
 
 for inx, elt in enumerate(zip(inputs, labels)):
     inputs, label = torch.tensor(elt[0]).view(1, 1, -1), torch.tensor(elt[1]).view(-1, 1, 1)
-    print(bit_input.size(), targets.size())
+    print(inputs.size(), label.size())
     optimizer.zero_grad()
 
-    out = model(bit_input)
-    loss = loss_function(out, targets)
+    out = model(inputs)
+    loss = loss_function(out, label)
     loss.backward()
     optimizer.step()
     step += 1
