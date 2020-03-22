@@ -10,14 +10,12 @@ class XORModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(XORModel, self).__init__()
         self.lstm = nn.LSTM(input_dim, hidden_dim)
-        self.hidden = nn.Linear(hidden_dim, hidden_dim)
         self.linear_out = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
-        lstm_out = self.run_through_lstm(x)
-        embed = self.hidden(x)
-        out   = self.linear_out(embed)
-        out   = F.log_softmax(out, dim=0)
+        lstm_out    = self.run_through_lstm(x)
+        out         = self.linear_out(lstm_out)
+        out         = F.log_softmax(out, dim=0)
         return out
 
     def run_through_lstm(self, x):
