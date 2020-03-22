@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 
 torch.manual_seed(1)
 
-class XORDataset(Dataset):
+class ParityDataset(Dataset):
     def __init__(self, num_sequences, seq_len):
         self.datas, self.labels = gen_sequences(num_sequences, seq_len)
 
@@ -18,9 +18,9 @@ class XORDataset(Dataset):
     def __len__(self):
         return len(self.datas)
 
-class XORModel(nn.Module):
+class ParityModel(nn.Module):
     def __init__(self, input_dim=1, hidden_dim=2, output_dim=1):
-        super(XORModel, self).__init__()
+        super(ParityModel, self).__init__()
         print('New LSTM: (input: {}, hidden: {}, output: {}\n'
             .format(input_dim, output_dim, hidden_dim))
         self.lstm = nn.LSTM(input_dim, hidden_dim)
@@ -36,12 +36,6 @@ class XORModel(nn.Module):
         return out
 
     def run_through_lstm(self, x):
-        x = x.float()
-        # hidden = (torch.randn(1, 1, 2), torch.randn(1, 1, 2))
-        # for i in x.view(-1, 1, 1):
-        #     i = i.long()
-        #     out, hidden = self.lstm(i.view(-1, 1, 1).long(), hidden)
-        # print(x.view(-1, 1, 1))
         out, h = self.lstm(x.view(1, 1, -1))
         return out
 
@@ -62,12 +56,12 @@ def gen_sequences(num_sequences, max_bits=50):
         labels.append(parity)
     return inputs, labels
 
-model = XORModel(input_dim=50, hidden_dim=2, output_dim=1)
-
 batch_size = 1
 num_sequences = 10000
 seq_len = 50
-train_dataloader = DataLoader(XORDataset(num_sequences, seq_len), batch_size)
+train_dataloader = DataLoader(ParityDataset(num_sequences, seq_len), batch_size)
+
+model = ParityModel(input_dim=seq_len, hidden_dim=2, output_dim=1)
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0)
 # loss_function = torch.nn.MSELoss()
 loss_function = torch.nn.BCELoss()
