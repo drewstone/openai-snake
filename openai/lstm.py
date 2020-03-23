@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-
+from sklearn.metrics import accuracy_score
 torch.manual_seed(1)
 
 def get_input(max_bits=50):
@@ -35,67 +35,95 @@ class ParityDataset(Dataset):
 
 
 class ParityModel(nn.Module):
-    def __init__(self, input_dim=1, hidden_dim=2, output_dim=1):
+    def __init__(self, input_dim=1, hidden_dim=2, output_dim=1, batch_size=1):
         super(ParityModel, self).__init__()
         print('New LSTM: (input: {}, hidden: {}, output: {})\n'
             .format(input_dim, hidden_dim, output_dim))
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        self.batch_size = batch_size
         self.lstm = nn.LSTM(input_dim, hidden_dim)
+        self.linear_in = nn.Linear(hidden_dim, hidden_dim)
         self.linear_out = nn.Linear(hidden_dim, output_dim)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = x.view(-1, 1, 1)
-        lstm_out    = self.run_through_lstm(x)
-        out         = F.relu(lstm_out)
-        # print('LSTM layer output size: {}'.format(lstm_out.size()))
+        out    = self.get_lstm_last_layer(x)
+        # out         = F.tanh(out)
+        # print('LSTM layer output size: {}'.format(out.size()))
+        # out         = self.linear_in(out)
+        # print('Linear label output size: {}'.format(out.size()))
+        # out         = torch.tanh(out)
         out         = self.linear_out(out)
         # print('Linear label output size: {}'.format(out.size()))
-        return out
+        predictions         = self.sigmoid(out)
+        return out, predictions
 
-    def run_through_lstm(self, x):
-        out, h = self.lstm(x)
+    def get_lstm_last_layer(self, x):
+        hidden = (
+            torch.randn(self.batch_size, self.input_dim, self.hidden_dim),
+            torch.randn(self.batch_size, self.input_dim, self.hidden_dim))
+        out, hidden = self.lstm(x, hidden)
         return out[-1]
 
+def evaluate(model, seq_len, device):
+  # evaluate on more bits than training to ensure generalization
+  test_loader = DataLoader(
+      ParityDataset(num_sequences=5000, seq_len=int(seq_len * 1.5)), batch_size=1)
+
+  is_correct = np.array([])
+
+  for inputs, targets in test_loader:
+    inputs = inputs.to(device)
+    targets = targets.to(device)
+
+    with torch.no_grad():
+      out, predictions = model(inputs)
+      is_correct = np.append(is_correct, ((predictions > 0.5) == (targets > 0.5)))
+
+  accuracy = is_correct.mean()
+  return accuracy
+
 batch_size = 1
-num_sequences = 10000
-seq_len = 10
+num_sequences = 1000
+seq_len = 50
 train_dataloader = DataLoader(ParityDataset(num_sequences, seq_len), batch_size)
 
-model = ParityModel(input_dim=1, hidden_dim=10, output_dim=1)
+model = ParityModel(input_dim=1, hidden_dim=2, output_dim=1, batch_size=1)
 
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
-# loss_function = torch.nn.MSELoss()
-loss_function = torch.nn.BCEWithLogitsLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+loss_function = torch.nn.MSELoss()
+# loss_function = torch.nn.BCEWithLogitsLoss()
 # loss_function = torch.nn.NLLLoss()
 # loss_function = torch.nn.CrossEntropyLoss()
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 running_loss = 0.0
-for inx, data in enumerate(train_dataloader):
-    inputs, labels = data
-    labels = labels.float().to(device=device)
-
-    optimizer.zero_grad()
-
-    out = model(inputs)
-    # print(out, labels)
-    loss = loss_function(out, labels.view(1, -1))
-    loss.backward()
-    optimizer.step()
-
-    running_loss += loss.item()
-    if inx % 1000 == 999:    # every 1000 mini-batches...
-        # ...log the running loss
-        print('training loss', running_loss / 1000)
-        running_loss = 0.0
-
-
-test_num_seq = 100
-test_dataloader = DataLoader(ParityDataset(test_num_seq, seq_len), batch_size)
-with torch.no_grad():
-    model.eval()
+for epoch in range(1, 5):
+    y_true = list()
+    y_pred = list()
     for inx, data in enumerate(train_dataloader):
         inputs, labels = data
         labels = labels.float().to(device=device)
-        out = model(inputs)
-        print(out, labels)
 
+        optimizer.zero_grad()
+
+        out, predictions = model(inputs)
+        loss = loss_function(out, labels.view(1, -1))
+        loss.backward()
+        optimizer.step()
+        accuracy = ((predictions > 0.5) == (labels > 0.5)).type(torch.FloatTensor).mean()
+
+        if inx % 250 == 249:
+            print('step {}, loss {}, accuracy {}'.format(inx, loss.item(), accuracy))
+
+        if inx % 1000 == 999:
+            test_accuracy = evaluate(model, seq_len, device)
+            print('test accuracy {}'.format(test_accuracy))
+            if test_accuracy == 1.0:
+                # stop early
+                break
+    y_true = list()
+    y_pred = list()
