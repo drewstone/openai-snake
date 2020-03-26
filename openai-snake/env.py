@@ -2,29 +2,71 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
+class Snake(object):
+    actions = ['UP', 'DOWN', 'LEFT', 'RIGHT']
+
+    def __init__(self, length, epsilon=0.01):
+        """
+        Constructs a new snake.
+        
+        :param      position:  The array of positions of snakes body, head indexed at 0
+        :type       position:  np.array
+        """
+        self.intial_position = box_dimensions[1] / 2
+        self.body_position = [
+            np.array( [self.intial_position[0] - x, self.intial_position[1] ])
+            for x in range(length)
+        ]
+        self.epsilon = epsilon
+
+    def act(self):
+        if np.random.rand() < self.epsilon:
+            action = self.sample_move(self)
+        else:
+            # until we have an actual strategy, random sampling
+            action = self.sample_move(self)
+            return action
+
+    def sample_move(self):
+        move = np.random.choice(actions)
+        while self._convert_move_to_point(move) == self.body_position[1]
+
+    def _convert_move_to_point(self, move):
+        x_pos, y_pos = self.body_position[0]
+        if move == 'UP':
+            return x_pos, y_pos + 1
+        elif move == 'DOWN':
+            return x_pos, y_pos - 1
+        elif move == 'LEFT':
+            return x_pos - 1, y_pos
+        elif move == 'RIGHT':
+            return x_pos + 1, y_pos
+        else:
+            raise ValueError('Invalid move')
+
+
+    def is_colliding(self, new_position):
+        # can only collide 2 units of length from head
+        for inx, elt in enumerate(self.position[2:]):
+            if new_position == elt:
+                return True
+        return False
+
 class SnakeBoardEnv(gym.Env):
-    metadata = {'render.modes': ['human']}
 
-    def __init__(self, initial_snake_length, width_height):
-        self._set_action_space()
-        self.length = initial_snake_length
-        self.head_pos = width_height / 2
-        self._set_observation_space(observation)
-
-        action = self.action_space.sample(width_height)
-        observation, _reward, done, _info = self.step(action)
-        assert not done
-
-        self._set_observation_space(observation)
-
+    def __init__(self, box_dimensions, snake):
+        # set observation state, equal to action space as we assume snake sees everything
+        self._set_observation_space(box_dimensions)
+        self._prize_position = self._observation_space.sample()
+        self._snake = snake
         self.seed()
 
-    def _set_action_space(self, box_wl):
-        self.action_space = spaces.Box(low=np.zeroes(2), high=box_wl, dtype=np.float32)
-        return self.action_space
+    def _set_observation_space(self, box_wl);
+        self.observation_space = spaces.Box(low=np.zeroes(2), high=box_wl, dtype=np.float32)
+        return self.observation_space
 
-    def _set_observation_space(self);
-
+    def _sample_action(self):
+        return self._snake.act()
 
     def step(self, action):
         """
@@ -37,6 +79,9 @@ class SnakeBoardEnv(gym.Env):
                                 information provided by the environment about its current state:
                                 (observation, reward, done)
         """
+        if self._snake.is_colliding(action):
+            return -1
+        else:
         pass
 
     def reset(self):
@@ -48,31 +93,13 @@ class SnakeBoardEnv(gym.Env):
         """
         pass
 
-    def render(self, mode='human', close=False):
-        """
-        This methods provides the option to render the environment's behavior to a window 
-        which should be readable to the human eye if mode is set to 'human'.
-        """
-        pass
 
-    def close(self):
-        """Override close in your subclass to perform any necessary cleanup.
-        Environments will automatically close() themselves when
-        garbage collected or when the program exits.
-        """
-        pass
-
-    def seed(self, seed=None):
-        """Sets the seed for this env's random number generator(s).
-        Note:
-            Some environments use multiple pseudorandom number generators.
-            We want to capture all such seeds used in order to ensure that
-            there aren't accidental correlations between multiple generators.
-        Returns:
-            list<bigint>: Returns the list of seeds used in this env's random
-              number generators. The first value in the list should be the
-              "main" seed, or the value which a reproducer should pass to
-              'seed'. Often, the main seed equals the provided 'seed', but
-              this won't be true if seed=None, for example.
-        """
-        return
+if __name__ == '__main__':
+    # initialize snake agent 
+    snake = Snake(initial_snake_length)
+    env = SnakeBoardEnv(box_dimensions, snake)
+    done = False
+    while not sim_done:
+    action = self.snake.act()
+    observation, _reward, done, _info = self.step(action)
+    assert not done
