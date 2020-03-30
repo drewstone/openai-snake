@@ -2,79 +2,16 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
-
-
-class Snake(object):
-    actions = ['UP', 'DOWN', 'LEFT', 'RIGHT']
-
-    def __init__(self, length, box_dimensions, epsilon=0.01):
-        """
-        Constructs a new snake.
-        
-        :param      position:  The array of positions of snakes body, head indexed at 0
-        :type       position:  np.array
-        """
-        self.i_pos = box_dimensions / 2
-        self.body_position = [np.array([
-            self.i_pos[0] - x,
-            self.i_pos[1]
-        ]) for x in range(length)]
-        self.epsilon = epsilon
-
-    def set_prize_position(self, position):
-        self.prize_position = position
-
-    def act(self):
-        if np.random.rand() < self.epsilon:
-            action = self.sample_move()
-        else:
-            action = self.move()
-        if np.array_equal(action, self.prize_position):
-            self.body_position = [action] + self.body_position
-        else:
-            self.body_position.pop()
-            self.body_position = [action] + self.body_position
-        return action
-
-    def move(self):
-        # until we have an actual, strategy sample random move
-        return self.sample_move()
-
-    def sample_move(self):
-        move = np.random.choice(self.actions)
-        # cant move into the portion one before the head,
-        # we sample moves until that isn't the case
-        while np.array_equal(self._convert_move_to_point(move), np.array(self.body_position[1])):
-            move = np.random.choice(self.actions)
-        return self._convert_move_to_point(move)
-
-    def _convert_move_to_point(self, move):
-        x_pos, y_pos = self.body_position[0]
-        if move == 'UP':
-            return np.array([x_pos, y_pos + 1])
-        elif move == 'DOWN':
-            return np.array([x_pos, y_pos - 1])
-        elif move == 'LEFT':
-            return np.array([x_pos - 1, y_pos])
-        elif move == 'RIGHT':
-            return np.array([x_pos + 1, y_pos])
-        else:
-            raise ValueError('Invalid move')
-
-
-    def is_colliding(self, new_position):
-        # can only collide 2 units of length from head
-        for inx, elt in enumerate(self.body_position[2:]):
-            if np.array_equal(np.array(new_position), np.array(elt)):
-                return True
-        return False
+import matplotlib.pyplot as plt
+from matplotlib import colors
+from snake import Snake
 
 class SnakeBoardEnv(gym.Env):
 
     def __init__(self, box_dimensions, snake):
         # set observation state, equal to action space as we assume snake sees everything
-        self.width = box_dimensions[0]
-        self.height = box_dimensions[1]
+        self.height = box_dimensions[0]
+        self.width = box_dimensions[1]
         self._set_observation_space(box_dimensions)
         self._prize_position = self._observation_space.sample()
         self._snake = snake
@@ -103,7 +40,15 @@ class SnakeBoardEnv(gym.Env):
                                 information provided by the environment about its current state:
                                 (observation, reward, done)
         """
-        if self._snake.is_colliding(action) or self._out_of_bounds(action):
+        new_position = snake._convert_move_to_point(action)
+        # update body position of the snake
+        if np.array_equal(new_position, self._prize_position):
+            self._snake.body_position = [action] + self._snake.body_position
+        else:
+            self._snake.body_position.pop()
+            self._snake.body_position = [action] + self._snake.body_position
+        # 
+        if self._snake.is_colliding(new_position) or self._out_of_bounds(new_position):
             return [], -1.0, True
         else:
             return [self._prize_position, self._observation_space], 0, False
@@ -116,6 +61,24 @@ class SnakeBoardEnv(gym.Env):
                                                 the initial state of the environment
         """
         pass
+
+    def render(self):
+        harvest = np.zeros((self.width, self.height))
+        for inx, elt in enumerate(self._snake.body_position):
+            harvest[int(elt[0])][int(elt[1])] = 10.0
+        harvest[int(prize_position[0])][int(prize_position[1])] = 5.0
+        fig, ax = plt.subplots()
+        ax.imshow(harvest)
+
+        # draw gridlines
+        ax.grid(which='major', axis='both', linestyle='-', color='k', linewidth=2)
+        ax.set_xticks(np.arange(-0.5, 10, 1));
+        ax.set_yticks(np.arange(-0.5, 10, 1));
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+         rotation_mode="anchor")
+
+        plt.show()
+
 
 
 if __name__ == '__main__':
@@ -130,10 +93,9 @@ if __name__ == '__main__':
     snake.set_prize_position(prize_position)
     done = False
     for _ in range(10):
+        env.render()
         action = snake.act()
-        print(snake.body_position)
         observation, _reward, done = env.step(action)
         if done:
-            print('Crashed into oneself: {}', env.snake.body_position)
-
-
+            print('Crashed into oneself or the barrier: {}', env._snake.body_position)
+            break
