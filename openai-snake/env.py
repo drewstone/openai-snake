@@ -43,10 +43,10 @@ class SnakeBoardEnv(gym.Env):
         new_position = snake._convert_move_to_point(action)
         # update body position of the snake
         if np.array_equal(new_position, self._prize_position):
-            self._snake.body_position = [action] + self._snake.body_position
+            self._snake.body_position = [new_position] + self._snake.body_position
         else:
             self._snake.body_position.pop()
-            self._snake.body_position = [action] + self._snake.body_position
+            self._snake.body_position = [new_position] + self._snake.body_position
         # 
         if self._snake.is_colliding(new_position) or self._out_of_bounds(new_position):
             return [], -1.0, True
@@ -64,7 +64,9 @@ class SnakeBoardEnv(gym.Env):
 
     def render(self):
         harvest = np.zeros((self.width, self.height))
+        print(self._snake.body_position)
         for inx, elt in enumerate(self._snake.body_position):
+            print(elt)
             harvest[int(elt[0])][int(elt[1])] = 10.0
         harvest[int(prize_position[0])][int(prize_position[1])] = 5.0
         fig, ax = plt.subplots()
@@ -95,6 +97,7 @@ if __name__ == '__main__':
     for _ in range(10):
         env.render()
         action = snake.act()
+        print(action)
         observation, _reward, done = env.step(action)
         if done:
             print('Crashed into oneself or the barrier: {}', env._snake.body_position)
