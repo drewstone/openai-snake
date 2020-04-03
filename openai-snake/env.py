@@ -29,6 +29,12 @@ class SnakeBoardEnv(gym.Env):
         else:
             return False
 
+    def _select_prize_pos(self):
+        prize_position = np.random.randint(10, size=2)
+        while this._snake.is_colliding(prize_position):
+            prize_position = np.random.randint(10, size=2)
+        return prize_position
+
     def step(self, action):
         """
         This method is the primary interface between environment and agent.
@@ -44,6 +50,8 @@ class SnakeBoardEnv(gym.Env):
         # update body position of the snake
         if np.array_equal(new_position, self._prize_position):
             self._snake.body_position = [new_position] + self._snake.body_position
+            self._prize_position = self._select_prize_position()
+
         else:
             self._snake.body_position.pop()
             self._snake.body_position = [new_position] + self._snake.body_position
@@ -56,15 +64,14 @@ class SnakeBoardEnv(gym.Env):
     def reset(self):
         """
         This method resets the environment to its initial values.
-        Returns:
-                observation:    array
-                                                the initial state of the environment
         """
         pass
 
     def render(self):
+        """
+        This method renders the environment in a matplotlib plot.
+        """
         harvest = np.zeros((self.width, self.height))
-        print(self._snake.body_position)
         for inx, elt in enumerate(self._snake.body_position):
             print(elt)
             harvest[int(elt[0])][int(elt[1])] = 10.0
