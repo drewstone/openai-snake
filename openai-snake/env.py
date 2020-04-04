@@ -10,8 +10,8 @@ from snake import Snake
 class SnakeBoardEnv(gym.Env):
     def __init__(self, box_dimensions, snake):
         # set observation state, equal to action space as we assume snake sees everything
-        self.height = box_dimensions[0]
-        self.width = box_dimensions[1]
+        self.width = box_dimensions[0]
+        self.height = box_dimensions[1]
         self._set_observation_space(box_dimensions)
         self._snake = snake
         self._prize_position = self._select_prize_pos()
@@ -37,10 +37,10 @@ class SnakeBoardEnv(gym.Env):
         return prize_position
 
     def _get_snake_board(self):
-        board = np.zeros((self.width, self.height))
+        board = np.zeros((self.height, self.width))
         for inx, elt in enumerate(self._snake.body_position):
-            board[int(elt[0])][int(elt[1])] = 10.0
-        board[int(self._prize_position[0])][int(self._prize_position[1])] = 5.0
+            board[int(elt[1])][int(elt[0])] = 10.0
+        board[int(self._prize_position[0])][int(self._prize_position[1])] = 3.0
         return board
 
     def step(self, action):
@@ -105,7 +105,8 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # initialize snake agent
     initial_snake_length = 3
-    box_dimensions = np.array([10, 10])
+    # width by height
+    box_dimensions = np.array([20, 10])
     snake = Snake(
         initial_snake_length,
         box_dimensions,
@@ -121,7 +122,7 @@ if __name__ == '__main__':
     for _ in range(10):
         env.render()
         action = snake.act(env._get_snake_board())
-        print(action)
+        print(action, snake.orientation)
         observation, _reward, done = env.step(action)
         if done:
             print('Crashed into oneself or the barrier: {}', env._snake.body_position)
