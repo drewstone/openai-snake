@@ -1,3 +1,4 @@
+import torch
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -7,14 +8,14 @@ from matplotlib import colors
 from snake import Snake
 
 class SnakeBoardEnv(gym.Env):
-
     def __init__(self, box_dimensions, snake):
         # set observation state, equal to action space as we assume snake sees everything
         self.height = box_dimensions[0]
         self.width = box_dimensions[1]
         self._set_observation_space(box_dimensions)
-        self._prize_position = self._observation_space.sample()
         self._snake = snake
+        self._prize_position = self._select_prize_pos()
+        self._snake._set_prize_position(self._prize_position)
         self.seed()
 
     def _set_observation_space(self, box_wl):
@@ -31,9 +32,16 @@ class SnakeBoardEnv(gym.Env):
 
     def _select_prize_pos(self):
         prize_position = np.random.randint(10, size=2)
-        while this._snake.is_colliding(prize_position):
+        while self._snake.is_colliding(prize_position):
             prize_position = np.random.randint(10, size=2)
         return prize_position
+
+    def _get_snake_board(self):
+        board = np.zeros((self.width, self.height))
+        for inx, elt in enumerate(self._snake.body_position):
+            board[int(elt[0])][int(elt[1])] = 10.0
+        board[int(self._prize_position[0])][int(self._prize_position[1])] = 5.0
+        return board
 
     def step(self, action):
         """
@@ -50,7 +58,7 @@ class SnakeBoardEnv(gym.Env):
         # update body position of the snake
         if np.array_equal(new_position, self._prize_position):
             self._snake.body_position = [new_position] + self._snake.body_position
-            self._prize_position = self._select_prize_position()
+            self._prize_position = self._select_prize_pos()
 
         else:
             self._snake.body_position.pop()
@@ -71,13 +79,9 @@ class SnakeBoardEnv(gym.Env):
         """
         This method renders the environment in a matplotlib plot.
         """
-        harvest = np.zeros((self.width, self.height))
-        for inx, elt in enumerate(self._snake.body_position):
-            print(elt)
-            harvest[int(elt[0])][int(elt[1])] = 10.0
-        harvest[int(prize_position[0])][int(prize_position[1])] = 5.0
+        board = self._get_snake_board()
         fig, ax = plt.subplots()
-        ax.imshow(harvest)
+        ax.imshow(board)
 
         # draw gridlines
         ax.grid(which='major', axis='both', linestyle='-', color='k', linewidth=2)
@@ -89,21 +93,34 @@ class SnakeBoardEnv(gym.Env):
         plt.show()
 
 
-
 if __name__ == '__main__':
+    BATCH_SIZE = 128
+    GAMMA = 0.999
+    EPS_START = 0.9
+    EPS_END = 0.05
+    EPS_DECAY = 200
+    TARGET_UPDATE = 10
+
+    # if gpu is to be used
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # initialize snake agent
     initial_snake_length = 3
     box_dimensions = np.array([10, 10])
-    snake = Snake(initial_snake_length, box_dimensions)
+    snake = Snake(
+        initial_snake_length,
+        box_dimensions,
+        BATCH_SIZE,
+        GAMMA,
+        EPS_START,
+        EPS_END,
+        EPS_DECAY,
+        TARGET_UPDATE
+    )
     env = SnakeBoardEnv(box_dimensions, snake)
-    prize_position = np.random.randint(10, size=2)
-    while snake.is_colliding(prize_position):
-        prize_position = np.random.randint(10, size=2)
-    snake.set_prize_position(prize_position)
     done = False
     for _ in range(10):
         env.render()
-        action = snake.act()
+        action = snake.act(env._get_snake_board())
         print(action)
         observation, _reward, done = env.step(action)
         if done:
