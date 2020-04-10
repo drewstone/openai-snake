@@ -43,6 +43,9 @@ class SnakeBoardEnv(gym.Env):
         board[int(self._prize_position[0])][int(self._prize_position[1])] = 3.0
         return board
 
+    def _get_last_screen(self):
+        return self._last_screen
+
     def step(self, action):
         """
         This method is the primary interface between environment and agent.
@@ -54,6 +57,7 @@ class SnakeBoardEnv(gym.Env):
                                 information provided by the environment about its current state:
                                 (observation, reward, done)
         """
+        self._last_screen = self._get_snake_board()
         new_position = snake._convert_move_to_point(action)
         # update body position of the snake
         if np.array_equal(new_position, self._prize_position):
@@ -65,9 +69,9 @@ class SnakeBoardEnv(gym.Env):
             self._snake.body_position = [new_position] + self._snake.body_position
         # 
         if self._snake.is_colliding(new_position) or self._out_of_bounds(new_position):
-            return [], -1.0, True
+            return None, -1.0, True
         else:
-            return [self._prize_position, self._observation_space], 0, False
+            return self._get_snake_board(), 0, False
 
     def reset(self):
         """
