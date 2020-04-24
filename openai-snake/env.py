@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from snake import Snake
 
+
 class SnakeBoardEnv(gym.Env):
     def __init__(self, box_dimensions, snake):
         # set observation state, equal to action space as we assume snake sees everything
@@ -39,6 +40,7 @@ class SnakeBoardEnv(gym.Env):
     def _get_snake_board(self):
         board = np.zeros((self.height, self.width))
         for inx, elt in enumerate(self._snake.body_position):
+            print(inx, elt)
             board[int(elt[1])][int(elt[0])] = 10.0
         board[int(self._prize_position[0])][int(self._prize_position[1])] = 3.0
         return board
@@ -58,7 +60,7 @@ class SnakeBoardEnv(gym.Env):
                                 (observation, reward, done)
         """
         self._last_screen = self._get_snake_board()
-        new_position = snake._convert_move_to_point(action)
+        new_position = self._snake._convert_move_to_point(action)
         # update body position of the snake
         if np.array_equal(new_position, self._prize_position):
             self._snake.body_position = [new_position] + self._snake.body_position
@@ -89,8 +91,8 @@ class SnakeBoardEnv(gym.Env):
 
         # draw gridlines
         ax.grid(which='major', axis='both', linestyle='-', color='k', linewidth=2)
-        ax.set_xticks(np.arange(-0.5, 10, 1));
-        ax.set_yticks(np.arange(-0.5, 10, 1));
+        ax.set_xticks(np.arange(-0.5, self._snake.width, 1));
+        ax.set_yticks(np.arange(-0.5, self._snake.height, 1));
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
          rotation_mode="anchor")
 
