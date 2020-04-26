@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # initialize snake agent
 initial_snake_length = 3
 # width by height
-box_dimensions = np.array([20, 10])
+box_dimensions = np.array([10, 10])
 snake = Snake(
     initial_snake_length,
     box_dimensions,

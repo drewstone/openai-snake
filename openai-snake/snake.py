@@ -4,6 +4,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from itertools import count
 from model import DQN, ReplayMemory, Transition
+import random
+import math as m
 
 
 class Snake(object):
@@ -34,7 +36,7 @@ class Snake(object):
         self.optimizer = optim.RMSprop(self.policy_net.parameters())
         self.memory = ReplayMemory(10000)
         self.steps_done = 0
-
+        self.cumulative_reward = 0.0
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
@@ -49,25 +51,14 @@ class Snake(object):
 
     def _reset(self):
         self.i_pos = self.box_dimensions / 2
-        print(self.i_pos)
         self.body_position = [np.array([ self.i_pos[0] - x, self.i_pos[1] ]) for x in range(self.length)]
 
-    def _set_prize_position(self, position):
-        self.prize_position = position
-
     def act(self, state):
-        if np.random.rand() < self.epsilon:
-            action = self.sample_move()
-        else:
-            action = self.move()
-        return action
+        a = self.select_action(state)
+        return self.actions[a.item()]
 
-    def move(self):
-        # until we have an actual, strategy sample random move
-        return self.sample_move()
-
-    def sample_move(self):
-        return np.random.choice(self.actions)
+    def _convert_action_to_tensor(self, action):
+        return torch.tensor(self.actions.index(action)).view(1, -1)
 
     def _convert_move_to_point(self, move):
         if move == 'FORWARD':
@@ -82,23 +73,32 @@ class Snake(object):
     def is_colliding(self, new_position):
         # can only collide 2 units of length from head
         for inx, elt in enumerate(self.body_position[2:]):
-            if np.array_equal(np.array(new_position), np.array(elt)):
+            if np.array_equal(np.array(new_position, dtype=int), np.array(elt, dtype=int)):
                 return True
         return False
 
-    def select_action(state):
+    def select_action(self, state):
         sample = np.random.random()
         eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
-            math.exp(-1. * self.steps_done / self.EPS_DECAY)
+            m.exp(-1. * self.steps_done / self.EPS_DECAY)
         self.steps_done += 1
         if sample > eps_threshold:
             with torch.no_grad():
+                state_tensor = torch.tensor(
+                    state,
+                    device=self.device
+                ).double()
+                state_shape = list(state_tensor.size())
+                state_tensor = state_tensor.view(1, 1, state_shape[0], state_shape[1])
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return policy_net(state).max(1)[1].view(1, 1)
+                return self.policy_net(state_tensor).max(1)[1].view(1, 1)
         else:
-            return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
+            return torch.tensor(
+                [[random.randrange(len(self.actions))]],
+                device=self.device,
+                dtype=torch.long)
 
     def _handle_forward(self, move):
         x_pos, y_pos = self.body_position[0]
@@ -156,19 +156,20 @@ class Snake(object):
     def optimize_model(self):
         if len(self.memory) < self.BATCH_SIZE:
             return
-        transitions = self.memory.sample(BATCH_SIZE)
+        transitions = self.memory.sample(self.BATCH_SIZE)
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
         # to Transition of batch-arrays.
         batch = Transition(*zip(*transitions))
-
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                              batch.next_state)), device=device, dtype=torch.bool)
-        non_final_next_states = torch.cat([s for s in batch.next_state
-                                                    if s is not None])
-        state_batch = torch.cat(batch.state)
+        non_final_mask = torch.tensor(
+            tuple(map(lambda s: s is not None, batch.next_state)),
+            device=self.device,
+            dtype=torch.bool
+        )
+        non_final_next_states = torch.cat([torch.from_numpy(s) for s in batch.next_state if s is not None])
+        state_batch = torch.cat([torch.from_numpy(s) for s in batch.state if s is not None])
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
 
@@ -182,7 +183,7 @@ class Snake(object):
         # on the "older" target_net; selecting their best reward with max(1)[0].
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
-        next_state_values = torch.zeros(BATCH_SIZE, device=device)
+        next_state_values = torch.zeros(self.BATCH_SIZE, device=device)
         next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch

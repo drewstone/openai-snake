@@ -16,7 +16,6 @@ class SnakeBoardEnv(gym.Env):
         self._set_observation_space(box_dimensions)
         self._snake = snake
         self._prize_position = self._select_prize_pos()
-        self._snake._set_prize_position(self._prize_position)
         self.seed()
 
     def _set_observation_space(self, box_wl):
@@ -32,15 +31,16 @@ class SnakeBoardEnv(gym.Env):
             return False
 
     def _select_prize_pos(self):
-        prize_position = np.random.randint(10, size=2)
-        while self._snake.is_colliding(prize_position):
+        prize_position = np.random.randint(min(self.width, self.height), size=2)
+        while self._snake.is_colliding(np.flip(np.array(prize_position, dtype=int))):
             prize_position = np.random.randint(10, size=2)
         return prize_position
 
     def _get_snake_board(self):
         board = np.zeros((self.height, self.width))
-        for inx, elt in enumerate(self._snake.body_position):
-            print(inx, elt)
+        head = self._snake.body_position[0]
+        board[int(head[1])][int(head[0])] = 15.0
+        for inx, elt in enumerate(self._snake.body_position[1:]):
             board[int(elt[1])][int(elt[0])] = 10.0
         board[int(self._prize_position[0])][int(self._prize_position[1])] = 3.0
         return board
@@ -49,37 +49,31 @@ class SnakeBoardEnv(gym.Env):
         return self._last_screen
 
     def step(self, action):
-        """
-        This method is the primary interface between environment and agent.
-        Paramters: 
-                action: int
-                                the index of the respective action (if action space is discrete)
-        Returns:
-                output: (array, float, bool)
-                                information provided by the environment about its current state:
-                                (observation, reward, done)
-        """
         self._last_screen = self._get_snake_board()
         new_position = self._snake._convert_move_to_point(action)
+        if self._snake.is_colliding(new_position) or self._out_of_bounds(new_position):
+            return None, -1.0, True
+
+        # TODO: Figuring out why the prize position needs to be inverted
+        # TODO: (there's some bad axes setting on the game)
         # update body position of the snake
-        if np.array_equal(new_position, self._prize_position):
+        flipped_prize_pos = np.flip(np.array(self._prize_position, dtype=int))
+        if np.array_equal(np.array(new_position, dtype=int), flipped_prize_pos):
+            print("The snake captured the prize!")
             self._snake.body_position = [new_position] + self._snake.body_position
             self._prize_position = self._select_prize_pos()
-
+            return self._get_snake_board(), 1, True
         else:
             self._snake.body_position.pop()
             self._snake.body_position = [new_position] + self._snake.body_position
-        # 
-        if self._snake.is_colliding(new_position) or self._out_of_bounds(new_position):
-            return None, -1.0, True
-        else:
             return self._get_snake_board(), 0, False
 
     def reset(self):
         """
         This method resets the environment to its initial values.
         """
-        pass
+        self._snake._reset()
+        self._prize_position = self._select_prize_pos()
 
     def render(self):
         """
@@ -128,7 +122,6 @@ if __name__ == '__main__':
     for _ in range(10):
         env.render()
         action = snake.act(env._get_snake_board())
-        print(action, snake.orientation)
         observation, _reward, done = env.step(action)
         if done:
             print('Crashed into oneself or the barrier: {}', env._snake.body_position)

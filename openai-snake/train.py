@@ -11,10 +11,11 @@ def train(
 ):
     episode_durations = []
     for i_episode in range(num_episodes):
+        print("Starting episode {}...".format(i_episode))
         # Initialize the environment and state
         env.reset()
+        # env.render()
         for t in count():
-            env.render()
             state = env._get_snake_board()
             # Select and perform an action
             action = snake.act(state)
@@ -24,11 +25,14 @@ def train(
             # Observe new state
             if not done:
                 next_state = env._get_snake_board()
+                # env.render()
             else:
-                next_state = None
+                break
 
             # Store the transition in memory
-            snake.memory.push(state, action, next_state, reward)
+
+            
+            snake.memory.push(state, snake._convert_action_to_tensor(action), next_state, reward)
 
             # Move to the next state
             state = next_state
