@@ -30,15 +30,15 @@ class ReplayMemory(object):
 class DQN(nn.Module):
     def __init__(self, h, w, outputs):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=(3, 3), stride=1).double()
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=(2, 2), stride=1).double()
         self.bn1 = nn.BatchNorm2d(16).double()
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=(3, 3), stride=1).double()
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=(2, 2), stride=1).double()
         self.bn2 = nn.BatchNorm2d(32).double()
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=(3, 3), stride=1).double()
+        self.conv3 = nn.Conv2d(32, 32, kernel_size=(2, 2), stride=1).double()
         self.bn3 = nn.BatchNorm2d(32).double()
         # Number of Linear input connections depends on output of conv2d layers
         # and therefore the input image size, so compute it.
-        def conv2d_size_out(size, kernel_size = 3, stride = 1):
+        def conv2d_size_out(size, kernel_size = 2, stride = 1):
             return (size - (kernel_size - 1) - 1) // stride  + 1
         convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(w)))
         convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(h)))
@@ -48,7 +48,10 @@ class DQN(nn.Module):
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
+        print('X', x.size())
+        conv_x = self.conv1(x)
+        bn = self.bn1(conv_x)
+        x = F.relu(bn)
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
         return self.head(x.view(x.size(0), -1))
