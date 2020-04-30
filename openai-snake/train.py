@@ -1,20 +1,41 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 from itertools import count
 from model import Transition
+import matplotlib.pyplot as plt
+from matplotlib import colors
+
+
+def render(env):
+    """
+    This method renders the environment in a matplotlib plot.
+    """
+    board = env._get_snake_board()
+    fig, ax = plt.subplots()
+    ax.imshow(board)
+
+    # draw gridlines
+    ax.grid(which='major', axis='both', linestyle='-', color='k', linewidth=2)
+    ax.set_xticks(np.arange(-0.5, env._snake.width, 1));
+    ax.set_yticks(np.arange(-0.5, env._snake.height, 1));
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+        rotation_mode="anchor")
+
+    plt.show()
 
 def train(
     env,
     snake,
     device,
-    num_episodes=50
+    num_episodes=1
 ):
     episode_durations = []
     for i_episode in range(num_episodes):
         print("Starting episode {}...".format(i_episode))
         # Initialize the environment and state
         env.reset()
-        # env.render()
+        render(env)
         for t in count():
             state = env._get_snake_board()
             # Select and perform an action
@@ -25,7 +46,7 @@ def train(
             # Observe new state
             if not done:
                 next_state = env._get_snake_board()
-                # env.render()
+                render(env)
             else:
                 break
 

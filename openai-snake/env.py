@@ -3,8 +3,6 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import colors
 from snake import Snake
 
 
@@ -74,23 +72,6 @@ class SnakeBoardEnv(gym.Env):
         """
         self._snake._reset()
         self._prize_position = self._select_prize_pos()
-
-    def render(self):
-        """
-        This method renders the environment in a matplotlib plot.
-        """
-        board = self._get_snake_board()
-        fig, ax = plt.subplots()
-        ax.imshow(board)
-
-        # draw gridlines
-        ax.grid(which='major', axis='both', linestyle='-', color='k', linewidth=2)
-        ax.set_xticks(np.arange(-0.5, self._snake.width, 1));
-        ax.set_yticks(np.arange(-0.5, self._snake.height, 1));
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-         rotation_mode="anchor")
-
-        plt.show()
 
 
 if __name__ == '__main__':
