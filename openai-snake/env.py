@@ -50,7 +50,7 @@ class SnakeBoardEnv(gym.Env):
         self._last_screen = self._get_snake_board()
         new_position = self._snake._convert_move_to_point(action)
         if self._snake.is_colliding(new_position) or self._out_of_bounds(new_position):
-            return None, -1.0, True
+            return None, -1, True
 
         # TODO: Figuring out why the prize position needs to be inverted
         # TODO: (there's some bad axes setting on the game)
@@ -60,7 +60,7 @@ class SnakeBoardEnv(gym.Env):
             print("The snake captured the prize!")
             self._snake.body_position = [new_position] + self._snake.body_position
             self._prize_position = self._select_prize_pos()
-            return self._get_snake_board(), 1, True
+            return self._get_snake_board(), 1, False
         else:
             self._snake.body_position.pop()
             self._snake.body_position = [new_position] + self._snake.body_position

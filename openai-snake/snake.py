@@ -37,6 +37,7 @@ class Snake(object):
         self.memory = ReplayMemory(10000)
         self.steps_done = 0
         self.cumulative_reward = 0.0
+        self.episode = 1
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
@@ -47,11 +48,18 @@ class Snake(object):
         self.EPS_END = EPS_END
         self.EPS_DECAY = EPS_DECAY
         self.TARGET_UPDATE = TARGET_UPDATE
-        self._reset()
+        self._reset(setup=True)
 
-    def _reset(self):
+    def _reset(self, setup=False):
         self.i_pos = self.box_dimensions / 2
         self.body_position = [np.array([ self.i_pos[0] - x, self.i_pos[1] ]) for x in range(self.length)]
+        self.cumulative_reward = 0.0
+
+        if not setup:
+            self.episode += 1
+
+        print('On episode {}'.format(self.episode))
+
 
     def act(self, state):
         a = self.select_action(state)
@@ -72,6 +80,7 @@ class Snake(object):
 
     def is_colliding(self, new_position):
         # can only collide 2 units of length from head
+        # TODO: FIX - I think this may be a bug and it should be 3 units from head
         for inx, elt in enumerate(self.body_position[2:]):
             if np.array_equal(np.array(new_position, dtype=int), np.array(elt, dtype=int)):
                 return True
@@ -153,6 +162,9 @@ class Snake(object):
         else:
             raise ValueError('Invalid orientation')
 
+    def process_reward(self, reward):
+        self.cumulative_reward += reward
+
     def optimize_model(self):
         if len(self.memory) < self.BATCH_SIZE:
             return
@@ -176,7 +188,6 @@ class Snake(object):
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
-        print('here', state_batch.view(self.BATCH_SIZE, 1, 10, 10).size())
         state_action_values = self.policy_net(
             state_batch.view(self.BATCH_SIZE, 1, 10, 10)
         ).gather(1, action_batch)
