@@ -34,8 +34,7 @@ snake = Snake(
 env = SnakeBoardEnv(box_dimensions, snake)
 
 fig = plt.figure() 
-ax = plt.axes(xlim=(-50, 50), ylim=(-50, 50)) 
-line, = ax.plot([], [], lw=2) 
+ax = fig.gca()
 
 def render(env, episode, score, steps):
     """
@@ -83,7 +82,7 @@ def animate(i):
     # Perform one step of the optimization (on the target network)
     snake.optimize_model()
     # Update the target network, copying all weights and biases in DQN
-    if snake.episode % snake.TARGET_UPDATE == 0:
+    if snake.steps_done % snake.TARGET_UPDATE == 0:
         snake.target_net.load_state_dict(snake.policy_net.state_dict())
     
     return render(env, snake.episode, snake.cumulative_reward, snake.steps_done)
@@ -97,7 +96,7 @@ plt.axis('off')
 anim = animation.FuncAnimation(
     fig,
     animate,
-    np.arange(100),
+    np.arange(1000),
     init_func=init,
     # blit=True,
     # repeat=False

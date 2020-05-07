@@ -52,13 +52,13 @@ class Snake(object):
 
     def _reset(self, setup=False):
         self.i_pos = self.box_dimensions / 2
-        self.body_position = [np.array([ self.i_pos[0] - x, self.i_pos[1] ]) for x in range(self.length)]
+        self.body_position = [np.array([ self.i_pos[0] - x, self.i_pos[1] ], dtype=int) for x in range(self.length)]
         self.cumulative_reward = 0.0
 
         if not setup:
             self.episode += 1
 
-        print('On episode {}'.format(self.episode))
+        print('On episode {}, step {}'.format(self.episode, self.steps_done))
 
 
     def act(self, state):
@@ -78,11 +78,12 @@ class Snake(object):
         else:
             raise ValueError('Invalid move')
 
-    def is_colliding(self, new_position):
-        # can only collide 2 units of length from head
-        # TODO: FIX - I think this may be a bug and it should be 3 units from head
-        for inx, elt in enumerate(self.body_position[2:]):
-            if np.array_equal(np.array(new_position, dtype=int), np.array(elt, dtype=int)):
+    def is_colliding(self, position):
+        curr_body = list(self.body_position)
+        curr_body.pop()
+
+        for _, elt in enumerate(curr_body):
+            if np.array_equal(elt, position):
                 return True
         return False
 

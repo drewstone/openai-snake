@@ -32,7 +32,7 @@ def train(
 ):
     episode_durations = []
     for i_episode in range(num_episodes):
-        print("Starting episode {}...".format(i_episode))
+        print("Starting episode {}, steps done {}...".format(i_episode, snake.steps_done))
         # Initialize the environment and state
         env.reset()
         render(env)
