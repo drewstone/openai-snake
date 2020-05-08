@@ -11,6 +11,8 @@ EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 200
 TARGET_UPDATE = 10
+# each episode is a snake's life
+NUM_EPISODES = 1000
 
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -31,4 +33,7 @@ snake = Snake(
 )
 env = SnakeBoardEnv(box_dimensions, snake)
 
-train(env, snake, device)
+train(env, snake, device, NUM_EPISODES)
+
+torch.save(snake.model.policy_net(), 'models/policy_net.model')
+torch.save(snake.model.target_net(), 'models/target_net.model')

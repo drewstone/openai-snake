@@ -24,19 +24,15 @@ def render(env):
 
     plt.show()
 
-def train(
-    env,
-    snake,
-    device,
-    num_episodes=1
-):
+def train(env, snake, device, num_episodes=1):
     episode_durations = []
     for i_episode in range(num_episodes):
         print("Starting episode {}, steps done {}...".format(i_episode, snake.steps_done))
         # Initialize the environment and state
         env.reset()
-        render(env)
-        for t in count():
+        # render(env)
+        done = False
+        while not done:
             state = env._get_snake_board()
             # Select and perform an action
             action = snake.act(state)
@@ -46,7 +42,7 @@ def train(
             # Observe new state
             if not done:
                 next_state = env._get_snake_board()
-                render(env)
+                # render(env)
             else:
                 break
 

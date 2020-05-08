@@ -28,6 +28,7 @@ class SnakeBoardEnv(gym.Env):
         else:
             return False
 
+    # TODO: This is still buggy, prize should never be colliding with the snake body
     def _select_prize_pos(self):
         prize_position = np.random.randint(min(self.width, self.height), size=2)
         while self._snake.is_colliding(np.flip(np.array(prize_position, dtype=int))):
