@@ -43,6 +43,7 @@ def train(env, snake, device, num_episodes=1):
                 next_state = env._get_snake_board()
                 # render(env)
             else:
+                # TODO: Remove this as it prevents learning on final states (death states)
                 next_state = None
             # Store the transition in memory
 

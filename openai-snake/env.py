@@ -35,6 +35,7 @@ class SnakeBoardEnv(gym.Env):
             prize_position = np.random.randint(10, size=2)
         return prize_position
 
+    # TODO: One-hot the snake head, body, and prize position
     def _get_snake_board(self):
         board = np.zeros((self.height, self.width))
         head = self._snake.body_position[0]
