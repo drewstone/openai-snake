@@ -1,2 +1,4 @@
 .DS_STORE
-**/*/anim.mp4
+*.mp4
+__pycache__
+models/*.model
