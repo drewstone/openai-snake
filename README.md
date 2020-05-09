@@ -9,7 +9,7 @@ The repo is structured through a few different files.
 - `train.py` is the training procedure.
 - `run.py` is the task runner. It runs the training procedure and initializes the snake and environment.
 - `animate.py` is an animator over a procedure similar to the task runner. It runs the training procedure currently and outputs an `anim.mp4` to visualilze the game dynamics.
--
+
 # Bugs
 There are few bugs currently within the repo, all marked with TODOs:
 - The prize sometimes gets placed on top of the snake. It should be sampled in all positions except the currently occupied ones.
